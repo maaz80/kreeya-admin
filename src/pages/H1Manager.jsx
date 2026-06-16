@@ -8,10 +8,12 @@ export default function H1Manager() {
      const [selectedPage, setSelectedPage] = useState('blogs');
      const [headingData, setHeadingData] = useState({});
      const [headingIds, setHeadingIds] = useState([]);
+     const [existingIds, setExistingIds] = useState({}); // MongoDB _id per headingId
      const [loading, setLoading] = useState(false);
      const [saveStatus, setSaveStatus] = useState('');
+     const [fetchError, setFetchError] = useState('');
 
-     const pages = ['blogs', 'contact', 'disclaimer', 'privacy-policy', 'portfolio-buyekls', 'portfolio-coinpay', 'portfolio-daccord', 'portfolio-nectar'];
+     const pages = ['blogs', 'contact-us', 'disclaimer', 'privacy-policy', 'portfolio-beyekls', 'portfolio-coinpay', 'portfolio-daccord', 'portfolio-nectar'];
 
      // Fetch heading structure when page changes
      useEffect(() => {
@@ -22,13 +24,27 @@ export default function H1Manager() {
 
      const fetchHeadingStructure = async () => {
           setLoading(true);
+          setFetchError('');
           try {
                const res = await fetch(`${API_URL}/h1/structure/${selectedPage}`);
+               if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    setFetchError(err.error || `Server error: ${res.status}`);
+                    setHeadingIds([]);
+                    setHeadingData({});
+                    setExistingIds({});
+                    return;
+               }
                const data = await res.json();
-               setHeadingIds(data.headingIds);
-               setHeadingData(data.existingData);
+               setHeadingIds(data.headingIds || []);
+               setHeadingData(data.existingData || {});
+               setExistingIds(data.existingIds || {});
           } catch (error) {
                console.error('Error fetching structure:', error);
+               setFetchError('Could not connect to backend. Is the server running?');
+               setHeadingIds([]);
+               setHeadingData({});
+               setExistingIds({});
           } finally {
                setLoading(false);
           }
@@ -42,7 +58,6 @@ export default function H1Manager() {
      };
 
      const handleSave = async (headingId) => {
-          // Check if value is empty
           if (!headingData[headingId] || headingData[headingId].trim() === '') {
                setSaveStatus('Cannot save empty field!');
                setTimeout(() => setSaveStatus(''), 2000);
@@ -52,9 +67,7 @@ export default function H1Manager() {
           try {
                const res = await fetch(`${API_URL}/h1/upsert`, {
                     method: 'POST',
-                    headers: {
-                         'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                          pageName: selectedPage,
                          headingId,
@@ -64,6 +77,9 @@ export default function H1Manager() {
 
                if (!res.ok) throw new Error('Save failed');
 
+               const saved = await res.json();
+               // Update existingIds with new/updated _id
+               setExistingIds(prev => ({ ...prev, [headingId]: saved._id }));
                setSaveStatus(`Saved: ${headingId}`);
                setTimeout(() => setSaveStatus(''), 2000);
           } catch (error) {
@@ -72,8 +88,33 @@ export default function H1Manager() {
           }
      };
 
+     const handleDelete = async (headingId) => {
+          const id = existingIds[headingId];
+          if (!id) {
+               // Not saved yet, just clear UI
+               setHeadingData(prev => ({ ...prev, [headingId]: '' }));
+               return;
+          }
+
+          try {
+               const res = await fetch(`${API_URL}/h1/${id}`, { method: 'DELETE' });
+               if (!res.ok) throw new Error('Delete failed');
+
+               setExistingIds(prev => {
+                    const updated = { ...prev };
+                    delete updated[headingId];
+                    return updated;
+               });
+               setHeadingData(prev => ({ ...prev, [headingId]: '' }));
+               setSaveStatus(`Deleted: ${headingId}`);
+               setTimeout(() => setSaveStatus(''), 2000);
+          } catch (error) {
+               console.error('Error deleting:', error);
+               setSaveStatus('Error deleting!');
+          }
+     };
+
      const handleSaveAll = async () => {
-          // Check if any field is empty
           const emptyFields = headingIds.filter(id => !headingData[id] || headingData[id].trim() === '');
 
           if (emptyFields.length > 0) {
@@ -87,9 +128,7 @@ export default function H1Manager() {
                const promises = headingIds.map(async (headingId) => {
                     const res = await fetch(`${API_URL}/h1/upsert`, {
                          method: 'POST',
-                         headers: {
-                              'Content-Type': 'application/json',
-                         },
+                         headers: { 'Content-Type': 'application/json' },
                          body: JSON.stringify({
                               pageName: selectedPage,
                               headingId,
@@ -97,10 +136,15 @@ export default function H1Manager() {
                          })
                     });
                     if (!res.ok) throw new Error('Save all failed');
-                    return res.json();
+                    const saved = await res.json();
+                    return { headingId, _id: saved._id };
                });
 
-               await Promise.all(promises);
+               const results = await Promise.all(promises);
+               const newIds = {};
+               results.forEach(({ headingId, _id }) => { newIds[headingId] = _id; });
+               setExistingIds(prev => ({ ...prev, ...newIds }));
+
                setSaveStatus('All headings saved successfully!');
                setTimeout(() => setSaveStatus(''), 3000);
           } catch (error) {
@@ -111,12 +155,10 @@ export default function H1Manager() {
           }
      };
 
-     // Check if a specific field is empty
      const isFieldEmpty = (headingId) => {
           return !headingData[headingId] || headingData[headingId].trim() === '';
      };
 
-     // Check if any field is empty for Save All button
      const isAnyFieldEmpty = () => {
           return headingIds.some(id => isFieldEmpty(id));
      };
@@ -145,9 +187,20 @@ export default function H1Manager() {
 
                     {/* Save Status */}
                     {saveStatus && (
-                         <div className={`mb-4 p-3 rounded ${saveStatus.includes('Error') || saveStatus.includes('Cannot') ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
+                         <div className={`mb-4 p-3 rounded ${saveStatus.includes('Error') || saveStatus.includes('Cannot')
+                              ? 'bg-red-100 text-red-700'
+                              : saveStatus.includes('Deleted')
+                                   ? 'bg-yellow-100 text-yellow-700'
+                                   : 'bg-green-100 text-green-700'
                               }`}>
                               {saveStatus}
+                         </div>
+                    )}
+
+                    {/* Fetch Error */}
+                    {fetchError && (
+                         <div className="mb-4 p-3 rounded bg-red-100 text-red-700">
+                              ❌ {fetchError}
                          </div>
                     )}
 
@@ -156,10 +209,19 @@ export default function H1Manager() {
                          <div className="text-center py-8">Loading...</div>
                     ) : (
                          <div className="space-y-4">
+                              {headingIds.length === 0 && !fetchError && (
+                                   <div className="text-center py-8 text-gray-500">
+                                        No heading fields defined for this page.
+                                   </div>
+                              )}
+
                               {headingIds.map((headingId) => (
                                    <div key={headingId} className="border border-gray-400 rounded-lg p-4">
                                         <label className="block text-sm font-medium mb-2">
                                              {headingId.replace(/_/g, ' ').toUpperCase()}
+                                             {existingIds[headingId] && (
+                                                  <span className="ml-2 text-xs text-green-600 font-normal">✓ Saved</span>
+                                             )}
                                         </label>
                                         <div className="flex gap-2">
                                              <input
@@ -169,16 +231,26 @@ export default function H1Manager() {
                                                   placeholder={`Enter text for ${headingId}`}
                                                   className="flex-1 p-2 border border-gray-400 rounded-md"
                                              />
-                                             <button
-                                                  onClick={() => handleSave(headingId)}
-                                                  disabled={isFieldEmpty(headingId)}
-                                                  className={`px-4 py-2 rounded-md cursor-pointer ${isFieldEmpty(headingId)
-                                                       ? 'bg-gray-400 cursor-not-allowed text-white/60'
-                                                       : 'bg-orange-500 hover:bg-orange-600 text-white'
-                                                       }`}
-                                             >
-                                                  Save
-                                             </button>
+
+                                             {/* Save button — shown when field has content */}
+                                             {!isFieldEmpty(headingId) && (
+                                                  <button
+                                                       onClick={() => handleSave(headingId)}
+                                                       className="px-4 py-2 rounded-md cursor-pointer bg-orange-500 hover:bg-orange-600 text-white"
+                                                  >
+                                                       Save
+                                                  </button>
+                                             )}
+
+                                             {/* Delete button — shown when field is empty AND record exists in DB */}
+                                             {isFieldEmpty(headingId) && existingIds[headingId] && (
+                                                  <button
+                                                       onClick={() => handleDelete(headingId)}
+                                                       className="px-4 py-2 rounded-md cursor-pointer bg-red-500 hover:bg-red-600 text-white"
+                                                  >
+                                                       Delete
+                                                  </button>
+                                             )}
                                         </div>
                                    </div>
                               ))}
