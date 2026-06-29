@@ -6,7 +6,7 @@ const API_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000/api';
 const PAGES = [
      { title: 'Home', slug: 'home' },
      { title: 'About Us', slug: 'about-us' },
-     { title: 'Blog Details', slug: 'blogs-details' },
+     // { title: 'Blog Details', slug: 'blogs-details' },
      { title: 'Blogs', slug: 'blogs' },
      { title: 'Contact Us', slug: 'contact-us' },
      { title: 'Disclaimer', slug: 'disclaimer' },

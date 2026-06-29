@@ -23,6 +23,22 @@ export default function Blogs() {
      const [seoDescription, setSeoDescription] = useState("");
      const [slug, setSlug] = useState("");
      const [error, setError] = useState("");
+     const [faq, setFaq] = useState([{ ques: "", ans: "" }]);
+
+     const updateFaq = (index, field, value) => {
+          const newFaq = [...faq];
+          newFaq[index] = { ...newFaq[index], [field]: value };
+          setFaq(newFaq);
+     };
+
+     const addFaq = () => {
+          setFaq([{ ques: "", ans: "" }, ...faq]);
+     };
+
+     const deleteFaq = (index) => {
+          setFaq(faq.filter((_, i) => i !== index));
+     };
+
      const fetchBlogs = async () => {
 
           const res = await fetch(`${API_URL}/blogs`);
@@ -51,6 +67,7 @@ export default function Blogs() {
           setSlug("");
           setSeoDescription("");
           setError("");
+          setFaq([{ ques: "", ans: "" }]);
           setShowModal(true);
 
      };
@@ -70,6 +87,7 @@ export default function Blogs() {
           setSeoKeywords(blog.seoKeywords || "");
           setSeoDescription(blog.seoDescription || "");
           setError("");
+          setFaq(Array.isArray(blog.faq) ? blog.faq.map(f => ({ ques: f.ques || "", ans: f.ans || "" })) : [{ ques: "", ans: "" }]);
           setShowModal(true);
      };
 
@@ -98,6 +116,8 @@ export default function Blogs() {
                formData.append("seoTitle", seoTitle);
                formData.append("seoKeywords", seoKeywords);
                formData.append("seoDescription", seoDescription);
+               const filteredFaq = faq.filter(f => f.ques.trim() || f.ans.trim());
+               formData.append("faq", JSON.stringify(filteredFaq));
                if (image) formData.append("image", image);
 
                let res;
@@ -348,6 +368,56 @@ export default function Blogs() {
 
                                    <ImageUploader setImage={setImage} initialImage={editItem?.image} />
 
+                                   {/* FAQ SECTION */}
+                                   <div className="mb-6 p-4 border border-gray-200 rounded-lg bg-gray-50">
+                                        <div className="flex justify-between items-center mb-4">
+                                             <label className="block text-sm font-bold text-gray-700">
+                                                  Blog Specific FAQs (Optional)
+                                             </label>
+                                             <button
+                                                  type="button"
+                                                  onClick={addFaq}
+                                                  className="bg-orange-500 hover:bg-orange-600 text-white px-3 py-1.5 rounded text-sm font-medium transition cursor-pointer"
+                                             >
+                                                  Add FAQ
+                                             </button>
+                                        </div>
+                                        <div className="space-y-4">
+                                             {faq.map((item, index) => (
+                                                  <div key={index} className="bg-white p-4 rounded-lg border border-gray-200 relative space-y-3 shadow-sm">
+                                                       <div>
+                                                            <label className="block text-[11px] font-semibold text-gray-500 uppercase mb-1">Question {index + 1}</label>
+                                                            <input
+                                                                 value={item.ques}
+                                                                 onChange={(e) => updateFaq(index, 'ques', e.target.value)}
+                                                                 placeholder="Enter FAQ question..."
+                                                                 className="border w-full p-2.5 rounded-lg focus:ring-2 focus:ring-orange-400 outline-none text-sm"
+                                                            />
+                                                       </div>
+                                                       <div>
+                                                            <label className="block text-[11px] font-semibold text-gray-500 uppercase mb-1">Answer {index + 1}</label>
+                                                            <textarea
+                                                                 value={item.ans}
+                                                                 onChange={(e) => updateFaq(index, 'ans', e.target.value)}
+                                                                 placeholder="Enter FAQ answer..."
+                                                                 rows={2}
+                                                                 className="border w-full p-2.5 rounded-lg focus:ring-2 focus:ring-orange-400 outline-none text-sm"
+                                                            />
+                                                       </div>
+                                                       <button
+                                                            type="button"
+                                                            onClick={() => deleteFaq(index)}
+                                                            className="absolute top-2 right-2 text-red-500 hover:text-red-700 transition cursor-pointer"
+                                                            title="Delete FAQ"
+                                                       >
+                                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                            </svg>
+                                                       </button>
+                                                  </div>
+                                             ))}
+                                        </div>
+                                   </div>
 
                                    {/* CONTENT EDITOR */}
 
