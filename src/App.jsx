@@ -10,6 +10,7 @@ import AdminTestimonials from "./pages/Testimonials"
 import About from "./pages/About"
 import FooterManager from "./pages/Footer"
 import HeroManager from "./pages/HeroManager"
+import OpeningVideoManager from "./pages/OpeningVideoManager"
 import NavbarManager from "./pages/Navbar"
 import H2Manager from "./pages/H2Manager"
 import H1Manager from "./pages/H1Manager"
@@ -36,6 +37,7 @@ const App = () => {
         <Route path='/login' element={<Login />} />
         <Route path='/' element={protectedPage(<Home />)} />
         <Route path='/hero' element={protectedPage(<HeroManager />)} />
+        <Route path='/opening-video' element={protectedPage(<OpeningVideoManager />)} />
         <Route path='/faq' element={protectedPage(<Faq />)} />
         <Route path='/blogs' element={protectedPage(<Blogs />)} />
         <Route path='/service' element={protectedPage(<Services />)} />

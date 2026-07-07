@@ -15,6 +15,7 @@ const Home = () => {
                     Logout
                </button>
                <Link to="/hero" className='bg-orange-600 px-10 py-3 rounded-2xl text-center w-100'>Hero</Link>
+               <Link to="/opening-video" className='bg-orange-600 px-10 py-3 rounded-2xl text-center w-100'>Opening Video</Link>
                <Link to="/blogs" className='bg-orange-600 px-10 py-3 rounded-2xl text-center w-100'>Blogs</Link>
                <Link to="/h1" className='bg-orange-600 px-10 py-3 rounded-2xl text-center w-100'>H1</Link>
                <Link to="/h2" className='bg-orange-600 px-10 py-3 rounded-2xl text-center w-100'>H2</Link>

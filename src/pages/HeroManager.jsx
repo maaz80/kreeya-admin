@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import ImageUploader from "../components/ImageUploader";
 import Breadcrumb from "../components/BreadCrumb";
 
 const API = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000/api';
@@ -8,6 +7,8 @@ export default function HeroManager() {
 
      const [data, setData] = useState({});
      const [video, setVideo] = useState(null);
+     const [loading, setLoading] = useState(false);
+     const [showVideoUploader, setShowVideoUploader] = useState(false);
 
      const fetchHero = async () => {
 
@@ -31,6 +32,7 @@ export default function HeroManager() {
 
      const saveHero = async () => {
 
+          setLoading(true);
           try {
 
                const formData = new FormData();
@@ -53,17 +55,17 @@ export default function HeroManager() {
                console.log("Update response:", result);
 
                alert("Hero Updated");
+               setVideo(null);
+               setShowVideoUploader(false);
                fetchHero();
 
           } catch (error) {
 
                console.error("HERO UPDATE ERROR:", error);
+               alert("Error updating hero");
 
-               res.status(500).json({
-                    success: false,
-                    message: error.message
-               });
-
+          } finally {
+               setLoading(false);
           }
 
      };
@@ -97,16 +99,38 @@ export default function HeroManager() {
 
                          <div>
 
-                              <video
-                                   src={data.video}
-                                   className="w-130 mx-auto mb-3"
-                              />
-
-                              {!data.video && (
-                                   <input
-                                        type="file"
-                                        onChange={(e) => setVideo(e.target.files[0])}
+                              {/* Current Video Preview */}
+                              {data.video && (
+                                   <video
+                                        src={data.video}
+                                        className="w-130 mx-auto mb-3 rounded-lg"
+                                        controls
                                    />
+                              )}
+
+                              {/* Change Video Button */}
+                              <button
+                                   onClick={() => setShowVideoUploader(!showVideoUploader)}
+                                   className="bg-orange-500 hover:bg-orange-600 text-white px-5 py-2 rounded-full text-sm font-medium transition-colors cursor-pointer mb-3"
+                              >
+                                   {showVideoUploader ? "Cancel" : data.video ? " Change Video" : "Upload Video"}
+                              </button>
+
+                              {/* Video Upload Input */}
+                              {showVideoUploader && (
+                                   <div className="border-2 border-dashed border-gray-300 rounded-xl p-4 w-130 mx-auto bg-gray-50">
+                                        <input
+                                             type="file"
+                                             accept="video/*"
+                                             onChange={(e) => setVideo(e.target.files[0])}
+                                             className="text-sm"
+                                        />
+                                        {video && (
+                                             <p className="text-green-600 mt-2 text-sm font-medium">
+                                                  Selected: {video.name} ({(video.size / (1024 * 1024)).toFixed(1)} MB)
+                                             </p>
+                                        )}
+                                   </div>
                               )}
 
                          </div>
@@ -141,9 +165,10 @@ export default function HeroManager() {
 
                          <button
                               onClick={saveHero}
-                              className="bg-orange-500 text-white px-10 py-4 rounded-full"
+                              disabled={loading}
+                              className="bg-orange-500 hover:bg-orange-600 text-white px-10 py-4 rounded-full disabled:opacity-50 cursor-pointer"
                          >
-                              Save Hero
+                              {loading ? "Saving..." : "Save Hero"}
                          </button>
 
                     </div>
