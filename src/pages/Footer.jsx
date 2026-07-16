@@ -178,21 +178,42 @@ export default function FooterManager() {
                               className="bg-transparent border-b text-[32px] w-full mb-6 outline-none"
                          />
 
-                         <input
-                              name="city"
-                              value={data.city || ""}
-                              onChange={handleChange}
-                              placeholder="City"
-                              className="p-2 text-black rounded w-full mb-4"
-                         />
+                         <div className="grid grid-cols-2 gap-4 mb-4">
+                              <div>
+                                   <input
+                                        name="city1"
+                                        value={data.city1 || data.city || ""}
+                                        onChange={handleChange}
+                                        placeholder="City 1"
+                                        className="p-2 text-black rounded w-full mb-2"
+                                   />
 
-                         <textarea
-                              name="address"
-                              value={data.address || ""}
-                              onChange={handleChange}
-                              placeholder="Address"
-                              className="p-2 text-black rounded w-full"
-                         />
+                                   <textarea
+                                        name="address1"
+                                        value={data.address1 || data.address || ""}
+                                        onChange={handleChange}
+                                        placeholder="Address 1"
+                                        className="p-2 text-black rounded w-full"
+                                   />
+                              </div>
+                              <div>
+                                   <input
+                                        name="city2"
+                                        value={data.city2 || ""}
+                                        onChange={handleChange}
+                                        placeholder="City 2"
+                                        className="p-2 text-black rounded w-full mb-2"
+                                   />
+
+                                   <textarea
+                                        name="address2"
+                                        value={data.address2 || ""}
+                                        onChange={handleChange}
+                                        placeholder="Address 2"
+                                        className="p-2 text-black rounded w-full"
+                                   />
+                              </div>
+                         </div>
 
                     </div>
 
