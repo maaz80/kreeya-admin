@@ -10,13 +10,14 @@ const PAGES = [
      { id: 'privacy-policy', title: 'Privacy Policy', slug: '/privacy-policy' },
      { id: 'services', title: 'Services', slug: '/services' },
      { id: 'portfolios', title: 'Portfolios', slug: '/portfolios' },
+     { id: 'case-studies', title: 'Case Studies', slug: '/case-studies' },
      { id: 'disclaimer', title: 'Disclaimer', slug: '/disclaimer' },
-     { id: 'blogs', title: 'Blogs', slug: '/blogs' },
+     { id: 'blogs', title: 'Blogs', slug: '/blog' },
      { id: 'not-found', title: '404 Page', slug: '*' },
-     { id: 'portfolio-coinpay', title: 'Portfolio CoinPay', slug: '/portfolio-coinpay' },
-     { id: 'portfolio-daccord', title: 'Portfolio Daccord', slug: '/portfolio-daccord' },
-     { id: 'portfolio-nectar', title: 'Portfolio Nectar', slug: '/portfolio-nectar' },
-     { id: 'portfolio-beyekls', title: 'Portfolio Beyekls', slug: '/portfolio-beyekls' },
+     { id: 'portfolio-coinpay', title: 'Portfolio CoinPay', slug: '/case-studies/portfolio-coinpay' },
+     { id: 'portfolio-daccord', title: 'Portfolio Daccord', slug: '/case-studies/portfolio-daccord' },
+     { id: 'portfolio-nectar', title: 'Portfolio Nectar', slug: '/case-studies/portfolio-nectar' },
+     { id: 'portfolio-beyekls', title: 'Portfolio Beyekls', slug: '/case-studies/portfolio-beyekls' },
 ];
 
 function PageRow({ page, seoData, onChange, onSave, saving, saved }) {
@@ -102,17 +103,17 @@ function PageRow({ page, seoData, onChange, onSave, saving, saved }) {
                     </span>
                </div>
 
-               {/* Keywords */}
-               {/* <div style={{ position: 'relative' }}>
-                    <input
-                         type="text"
-                         value={seoData.keywords}
-                         onChange={e => onChange('keywords', e.target.value)}
-                         placeholder="keyword1, keyword2..."
+               {/* Schema (JSON-LD) */}
+               <div style={{ position: 'relative' }}>
+                    <textarea
+                         value={seoData.schema || ''}
+                         onChange={e => onChange('schema', e.target.value)}
+                         placeholder="Paste JSON-LD schema code here..."
+                         rows={2}
                          style={{
                               width: '100%',
                               padding: '8px 10px',
-                              fontSize: 12,
+                              fontSize: 11,
                               border: '1.5px solid #e5e7eb',
                               borderRadius: 8,
                               outline: 'none',
@@ -120,11 +121,14 @@ function PageRow({ page, seoData, onChange, onSave, saving, saved }) {
                               background: '#fff',
                               boxSizing: 'border-box',
                               transition: 'border-color 0.15s',
+                              resize: 'vertical',
+                              minHeight: '38px',
+                              fontFamily: 'monospace',
                          }}
                          onFocus={e => (e.target.style.borderColor = '#f97316')}
                          onBlur={e => (e.target.style.borderColor = '#e5e7eb')}
                     />
-               </div> */}
+               </div>
 
                {/* Save Button */}
                <button
@@ -158,9 +162,9 @@ export default function PageSEOManager() {
      const [isOpen, setIsOpen] = useState(false);
      const dropdownRef = useRef(null);
 
-     // Per-page SEO state: { [pageId]: { title, description, keywords } }
+     // Per-page SEO state: { [pageId]: { title, description, keywords, schema } }
      const [seoMap, setSeoMap] = useState(() =>
-          Object.fromEntries(PAGES.map(p => [p.id, { title: '', description: '', keywords: '' }]))
+          Object.fromEntries(PAGES.map(p => [p.id, { title: '', description: '', keywords: '', schema: '' }]))
      );
      const [loadingMap, setLoadingMap] = useState({});
      const [savingMap, setSavingMap] = useState({});
@@ -199,6 +203,7 @@ export default function PageSEOManager() {
                          title: data.title || '',
                          description: data.description || '',
                          keywords: data.keywords || '',
+                         schema: data.schema || '',
                     },
                }));
                setFetchedSet(prev => new Set([...prev, pageId]));
@@ -323,7 +328,7 @@ export default function PageSEOManager() {
                                         background: '#f9fafb',
                                         borderBottom: '1.5px solid #f0f0f0',
                                    }}>
-                                        {['Page', 'Meta Title', 'Meta Description', ''].map((label, i) => (
+                                        {['Page', 'Meta Title', 'Meta Description', 'JSON-LD Schema'].map((label, i) => (
                                              <span key={i} style={{
                                                   fontSize: 11,
                                                   fontWeight: 700,

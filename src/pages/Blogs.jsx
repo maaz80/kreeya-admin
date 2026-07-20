@@ -21,6 +21,7 @@ export default function Blogs() {
      const [seoTitle, setSeoTitle] = useState("");
      const [seoKeywords, setSeoKeywords] = useState("");
      const [seoDescription, setSeoDescription] = useState("");
+     const [schema, setSchema] = useState("");
      const [slug, setSlug] = useState("");
      const [error, setError] = useState("");
      const [faq, setFaq] = useState([{ ques: "", ans: "" }]);
@@ -66,6 +67,7 @@ export default function Blogs() {
           setSeoKeywords("");
           setSlug("");
           setSeoDescription("");
+          setSchema("");
           setError("");
           setFaq([{ ques: "", ans: "" }]);
           setShowModal(true);
@@ -86,6 +88,7 @@ export default function Blogs() {
           setSeoTitle(blog.seoTitle || "");
           setSeoKeywords(blog.seoKeywords || "");
           setSeoDescription(blog.seoDescription || "");
+          setSchema(blog.schema || "");
           setError("");
           setFaq(Array.isArray(blog.faq) ? blog.faq.map(f => ({ ques: f.ques || "", ans: f.ans || "" })) : [{ ques: "", ans: "" }]);
           setShowModal(true);
@@ -116,6 +119,7 @@ export default function Blogs() {
                formData.append("seoTitle", seoTitle);
                formData.append("seoKeywords", seoKeywords);
                formData.append("seoDescription", seoDescription);
+               formData.append("schema", schema);
                const filteredFaq = faq.filter(f => f.ques.trim() || f.ans.trim());
                formData.append("faq", JSON.stringify(filteredFaq));
                if (image) formData.append("image", image);
@@ -310,6 +314,21 @@ export default function Blogs() {
                                              placeholder="Enter SEO description (150-160 chars)"
                                              rows={3}
                                              className="border w-full p-3 rounded-lg focus:ring-2 focus:ring-orange-400 outline-none"
+                                        />
+                                   </div>
+
+                                   {/* JSON-LD SCHEMA */}
+                                   <div className="mb-4">
+                                        <label className="block text-sm font-medium mb-1">
+                                             JSON-LD Schema (Optional)
+                                        </label>
+
+                                        <textarea
+                                             value={schema}
+                                             onChange={(e) => setSchema(e.target.value)}
+                                             placeholder="Paste custom JSON-LD schema code here..."
+                                             rows={3}
+                                             className="border w-full p-3 rounded-lg focus:ring-2 focus:ring-orange-400 outline-none font-mono text-sm"
                                         />
                                    </div>
 

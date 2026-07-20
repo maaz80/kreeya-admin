@@ -3,6 +3,38 @@ import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
 import { useEffect, useRef, useState, useCallback } from "react";
 
+const CustomLink = Link.extend({
+     renderHTML({ HTMLAttributes }) {
+          const { href } = HTMLAttributes;
+          const isInternal = href && (href.startsWith("/") || href.includes("kreeyadesign.com"));
+          const attrs = { ...HTMLAttributes };
+
+          if (isInternal) {
+               delete attrs.target;
+               delete attrs.rel;
+               return [
+                    "a",
+                    {
+                         ...attrs,
+                         class: "editor-link",
+                    },
+                    0,
+               ];
+          }
+
+          return [
+               "a",
+               {
+                    ...attrs,
+                    class: "editor-link",
+                    target: "_blank",
+                    rel: "noopener noreferrer",
+               },
+               0,
+          ];
+     },
+});
+
 export default function Editor({ value, onChange }) {
      const isInternalUpdate = useRef(false);
      const [linkModalOpen, setLinkModalOpen] = useState(false);
@@ -34,14 +66,12 @@ export default function Editor({ value, onChange }) {
                          },
                     },
                }),
-               Link.configure({
+               CustomLink.configure({
                     openOnClick: true,           // Click pe link open ho
                     autolink: true,              // Auto-detect URLs
                     linkOnPaste: true,           // Paste pe auto-link
                     HTMLAttributes: {
                          class: "editor-link",
-                         rel: "noopener noreferrer",
-                         target: "_blank",
                     },
                }),
           ],
@@ -102,20 +132,26 @@ export default function Editor({ value, onChange }) {
      const applyLink = useCallback(() => {
           if (!editor || !linkUrl.trim()) return;
 
-          const url = linkUrl.startsWith("http://") || linkUrl.startsWith("https://")
-               ? linkUrl.trim()
-               : `https://${linkUrl.trim()}`;
+          let url = linkUrl.trim();
+          if (!url.startsWith("/") && !url.startsWith("http://") && !url.startsWith("https://")) {
+               url = `https://${url}`;
+          }
 
           const { from, to, empty } = editor.state.selection;
           const selectedText = empty ? "" : editor.state.doc.textBetween(from, to, "");
           const displayText = linkText.trim() || selectedText || url;
+
+          const isInternal = url.startsWith("/") || url.includes("kreeyadesign.com");
+          const linkHtml = isInternal
+               ? `<a href="${url}">${displayText}</a>`
+               : `<a href="${url}" target="_blank" rel="noopener noreferrer">${displayText}</a>`;
 
           if (empty && !selectedText) {
                // Koi selection nahi → naya text insert karo link ke saath
                editor
                     .chain()
                     .focus()
-                    .insertContent(`<a href="${url}" target="_blank" rel="noopener noreferrer">${displayText}</a>`)
+                    .insertContent(linkHtml)
                     .run();
           } else if (linkText.trim() && linkText.trim() !== selectedText) {
                // Text change kiya → replace selection with new linked text
@@ -123,7 +159,7 @@ export default function Editor({ value, onChange }) {
                     .chain()
                     .focus()
                     .deleteSelection()
-                    .insertContent(`<a href="${url}" target="_blank" rel="noopener noreferrer">${displayText}</a>`)
+                    .insertContent(linkHtml)
                     .run();
           } else {
                // Selection hai, sirf link lagao

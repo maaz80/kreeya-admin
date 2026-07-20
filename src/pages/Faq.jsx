@@ -12,6 +12,7 @@ const PAGES = [
      { title: 'Disclaimer', slug: 'disclaimer' },
      { title: 'Privacy Policy', slug: 'privacy-policy' },
      { title: 'Services', slug: 'services' },
+     { title: 'Case Studies', slug: 'case-studies' },
 ];
 
 const defaultFaq = {

@@ -77,6 +77,7 @@ export default function Locations() {
      const [itemSlug, setItemSlug] = useState("");
      const [itemDescription, setItemDescription] = useState("");
      const [itemKeywords, setItemKeywords] = useState("");
+     const [itemSchema, setItemSchema] = useState("");
      const [heroModal, setHeroModal] = useState(null);
      const [heroForm, setHeroForm] = useState(emptyHero);
      const [pageModal, setPageModal] = useState(null);
@@ -153,6 +154,7 @@ export default function Locations() {
           setItemSlug(item?.slug || "");
           setItemDescription(item?.description || "");
           setItemKeywords(Array.isArray(item?.keywords) ? item.keywords.join(", ") : (item?.keywords || ""));
+          setItemSchema(item?.schema || "");
           setSelectedLocation(location._id);
      };
 
@@ -171,6 +173,7 @@ export default function Locations() {
                seoTitle: itemSeoTitle,
                description: itemDescription,
                keywords: itemKeywords,
+               schema: itemSchema,
                hero: existing.hero || {},
                page: existing.page || {}
           };
@@ -459,6 +462,13 @@ export default function Locations() {
                               <input value={itemSlug} onChange={(e) => setItemSlug(e.target.value)} placeholder="Item Path" className={inputClass} />
                               <textarea value={itemDescription} onChange={(e) => setItemDescription(e.target.value)} placeholder="Item Description" rows={4} className={textareaClass} />
                               <input value={itemKeywords} onChange={(e) => setItemKeywords(e.target.value)} placeholder="Item Keywords" className={inputClass} />
+                              <textarea
+                                   value={itemSchema}
+                                   onChange={(e) => setItemSchema(e.target.value)}
+                                   placeholder="Item JSON-LD Schema (Optional)"
+                                   rows={3}
+                                   className={`${textareaClass} font-mono text-xs`}
+                              />
                               <ModalActions onCancel={() => setItemModal(null)} onSave={saveItem} loading={loadingAction === "item"} />
                          </Modal>
                     )}

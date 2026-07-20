@@ -78,6 +78,7 @@ export default function Services() {
      const [itemSlug, setItemSlug] = useState("");
      const [itemDescription, setItemDescription] = useState("");
      const [itemKeywords, setItemKeywords] = useState("");
+     const [itemSchema, setItemSchema] = useState("");
      const [itemImageFile, setItemImageFile] = useState(null);
      const [itemImageUrl, setItemImageUrl] = useState("");
      const [selectedServiceId, setSelectedServiceId] = useState("");
@@ -157,6 +158,7 @@ export default function Services() {
           setItemSlug(item?.slug || "");
           setItemDescription(item?.description || "");
           setItemKeywords(Array.isArray(item?.keywords) ? item.keywords.join(", ") : (item?.keywords || ""));
+          setItemSchema(item?.schema || "");
           setItemImageUrl(item?.image || "");
           setItemImageFile(null);
           setSelectedServiceId(service._id);
@@ -177,6 +179,7 @@ export default function Services() {
                seoTitle: itemSeoTitle,
                description: itemDescription,
                keywords: itemKeywords,
+               schema: itemSchema,
                image: itemImageUrl,
                hero: existing.hero || {},
                page: existing.page || {}
@@ -481,6 +484,13 @@ export default function Services() {
                               <input value={itemSlug} onChange={(e) => setItemSlug(e.target.value)} placeholder="Item Slug" className={inputClass} />
                               <textarea value={itemDescription} onChange={(e) => setItemDescription(e.target.value)} placeholder="Item Description" rows={4} className={textareaClass} />
                               <input value={itemKeywords} onChange={(e) => setItemKeywords(e.target.value)} placeholder="Item Keywords" className={inputClass} />
+                              <textarea
+                                   value={itemSchema}
+                                   onChange={(e) => setItemSchema(e.target.value)}
+                                   placeholder="Item JSON-LD Schema (Optional)"
+                                   rows={3}
+                                   className={`${textareaClass} font-mono text-xs`}
+                              />
                               <div className="border border-slate-200 p-4 rounded-xl bg-slate-50">
                                    <label className="block text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wider">Item Image</label>
                                    <ImageUploader
