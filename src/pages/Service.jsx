@@ -36,6 +36,32 @@ const normalizePage = (page) => ({
      faq: Array.isArray(page?.faq) ? page.faq.map(f => ({ ques: f?.ques || "", ans: f?.ans || "" })) : [{ ques: "", ans: "" }]
 });
 
+
+const emptyLocationMeta = {
+     country: "",
+     city: "",
+     title: "",
+     seoTitle: "",
+     description: "",
+     keywords: "",
+     schema: "",
+     image: "",
+     status: "published",
+     hero: emptyHero
+};
+
+const normalizeLocationMeta = (locationPage) => ({
+     country: locationPage?.country || "",
+     city: locationPage?.city || "",
+     title: locationPage?.title || "",
+     seoTitle: locationPage?.seoTitle || "",
+     description: locationPage?.description || "",
+     keywords: Array.isArray(locationPage?.keywords) ? locationPage.keywords.join(", ") : (locationPage?.keywords || ""),
+     schema: locationPage?.schema || "",
+     image: locationPage?.image || "",
+     status: locationPage?.status || "published",
+     hero: normalizeHero(locationPage?.hero)
+});
 const cleanPoints = (points) => points.map((point) => point.trim()).filter(Boolean);
 
 const hasPageContent = (page) => Boolean(
@@ -86,6 +112,8 @@ export default function Services() {
      const [heroForm, setHeroForm] = useState(emptyHero);
      const [pageModal, setPageModal] = useState(null);
      const [pageForm, setPageForm] = useState(emptyPage);
+     const [locationMeta, setLocationMeta] = useState(emptyLocationMeta);
+     const [locationImageFile, setLocationImageFile] = useState(null);
      const [cardModal, setCardModal] = useState(null);
      const [editingCardIndex, setEditingCardIndex] = useState(null);
      const [tempCard, setTempCard] = useState({});
@@ -266,42 +294,96 @@ export default function Services() {
      };
 
      const openPageModal = (service, item) => {
-          setPageModal({ service, item });
+          setPageModal({ service, item, mode: "base" });
           setPageForm(normalizePage(item.page));
+          setLocationMeta(emptyLocationMeta);
+          setLocationImageFile(null);
      };
 
-     const savePage = async (updatedPage = pageForm) => {
-          if (loadingAction) return;
-          setLoadingAction("page");
-          const payload = {
-               _id: pageModal.item._id,
-               title: pageModal.item.title,
-               hero: pageModal.item.hero || {},
-               page: stripPageFiles(updatedPage)
-          };
+     const openLocationPageModal = (service, item, locationPage = null) => {
+          setPageModal({ service, item, locationPage, mode: "location" });
+          setPageForm(normalizePage(locationPage?.page));
+          setLocationMeta(normalizeLocationMeta(locationPage));
+          setLocationImageFile(null);
+     };
 
-          const formData = new FormData();
-          formData.append("data", JSON.stringify(payload));
-
+     const appendPageImages = (formData, updatedPage) => {
           updatedPage.service.cards.forEach((card, index) => {
                if (card.file instanceof File) {
                     formData.append("serviceImages", card.file);
                     formData.append("serviceImageIndex", index);
                }
           });
+     };
+
+     const savePage = async (updatedPage = pageForm) => {
+          if (loadingAction) return;
+          setLoadingAction("page");
+
+          const isLocationPage = pageModal.mode === "location";
+          const payload = isLocationPage
+               ? {
+                    ...locationMeta,
+                    country: locationMeta.country,
+                    city: locationMeta.city,
+                    hero: {
+                         ...locationMeta.hero,
+                         points: cleanPoints(locationMeta.hero.points || [])
+                    },
+                    page: stripPageFiles(updatedPage)
+               }
+               : {
+                    _id: pageModal.item._id,
+                    title: pageModal.item.title,
+                    hero: pageModal.item.hero || {},
+                    page: stripPageFiles(updatedPage)
+               };
+
+          const formData = new FormData();
+          formData.append("data", JSON.stringify(payload));
+          appendPageImages(formData, updatedPage);
+
+          if (isLocationPage && locationImageFile) {
+               formData.append("itemImage", locationImageFile);
+          }
+
+          const locationPageId = pageModal.locationPage?._id;
+          const url = isLocationPage
+               ? locationPageId
+                    ? `${API}/services/${pageModal.service._id}/items/${pageModal.item._id}/location-pages/${locationPageId}`
+                    : `${API}/services/${pageModal.service._id}/items/${pageModal.item._id}/location-pages`
+               : `${API}/services/${pageModal.service._id}/items/${pageModal.item._id}`;
 
           try {
-               await fetch(`${API}/services/${pageModal.service._id}/items/${pageModal.item._id}`, {
-                    method: "PUT",
+               const res = await fetch(url, {
+                    method: isLocationPage && !locationPageId ? "POST" : "PUT",
                     body: formData
                });
 
+               if (!res.ok) {
+                    displayToast(await getErrorMessage(res, "Page save failed."));
+                    return;
+               }
+
                setPageModal(null);
+               setLocationImageFile(null);
                await fetchServices();
-               displayToast("Page saved successfully!");
+               displayToast(isLocationPage ? "Location page saved successfully!" : "Page saved successfully!");
           } finally {
                setLoadingAction(null);
           }
+     };
+
+     const deleteLocationPage = async (serviceId, itemId, locationPageId) => {
+          await fetch(`${API}/services/${serviceId}/items/${itemId}/location-pages/${locationPageId}`, { method: "DELETE" });
+          await fetchServices();
+          displayToast("Location page deleted successfully!");
+     };
+
+     const updateLocationHeroPoint = (index, value) => {
+          const points = [...locationMeta.hero.points];
+          points[index] = value;
+          setLocationMeta({ ...locationMeta, hero: { ...locationMeta.hero, points } });
      };
 
      const deletePageCard = (section, index) => {
@@ -414,7 +496,7 @@ export default function Services() {
 
                                    <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
                                         {(service.items || []).map((item) => (
-                                             <div key={item._id} className="border border-slate-200 rounded-xl p-4 bg-slate-50">
+                                             <div key={item._id} className="border border-slate-200 rounded-xl p-3 bg-slate-50">
                                                   <div className="flex items-start gap-4 mb-2">
                                                        {item.image && (
                                                             <img src={item.image} className="w-16 h-16 object-cover rounded-lg border border-slate-200" alt={item.title} />
@@ -433,17 +515,38 @@ export default function Services() {
                                                        </button>
                                                   </div>
 
-                                                  <div className="flex flex-wrap gap-2 mt-4">
+                                                  <div className="flex flex-wrap gap-1 mt-4">
                                                        <button onClick={() => openHeroModal(service, item)} className="px-3 py-2 bg-orange-500 text-white rounded-lg text-sm font-semibold hover:bg-orange-600 cursor-pointer">
                                                             Add Hero
                                                        </button>
                                                        <button onClick={() => openPageModal(service, item)} className="px-3 py-2 bg-purple-600 text-white rounded-lg text-sm font-semibold hover:bg-purple-700 cursor-pointer">
                                                             Add Page
                                                        </button>
+                                                       <button onClick={() => openLocationPageModal(service, item)} className="px-3 py-2 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg text-sm font-semibold hover:bg-indigo-100 cursor-pointer">
+                                                            Add Location Page
+                                                       </button>
                                                        <button onClick={() => deleteItem(service._id, item._id)} className="px-3 py-2 bg-red-50 text-red-600 border border-red-200 rounded-lg text-sm font-semibold hover:bg-red-100 cursor-pointer">
                                                             Delete
                                                        </button>
                                                   </div>
+
+                                                  {(item.locationPages || []).length > 0 && (
+                                                       <div className="mt-4 border-t border-slate-200 pt-3 space-y-2">
+                                                            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Location Pages</p>
+                                                            {(item.locationPages || []).map((locationPage) => (
+                                                                 <div key={locationPage._id} className="flex items-center justify-between gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2">
+                                                                      <div className="min-w-0">
+                                                                           <p className="text-sm font-semibold text-slate-700 truncate">/{locationPage.country}{locationPage.city ? `/${locationPage.city}` : ""}</p>
+                                                                           <p className="text-xs text-slate-500 truncate">{locationPage.title || locationPage.seoTitle || "Untitled location page"}</p>
+                                                                      </div>
+                                                                      <div className="flex gap-2 shrink-0">
+                                                                           <button onClick={() => openLocationPageModal(service, item, locationPage)} className="text-blue-600 text-xs font-semibold cursor-pointer">Edit</button>
+                                                                           <button onClick={() => deleteLocationPage(service._id, item._id, locationPage._id)} className="text-red-500 text-xs font-semibold cursor-pointer">Delete</button>
+                                                                      </div>
+                                                                 </div>
+                                                            ))}
+                                                       </div>
+                                                  )}
                                              </div>
                                         ))}
 
@@ -525,7 +628,7 @@ export default function Services() {
                          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex justify-center items-start z-50 p-4 overflow-y-auto">
                               <div className="bg-slate-50 rounded-2xl w-full max-w-6xl shadow-2xl my-6">
                                    <div className="sticky top-0 z-10 bg-white border-b border-slate-200 rounded-t-2xl px-6 py-4 flex justify-between items-center">
-                                        <h3 className="text-xl font-bold text-slate-800">Add Page</h3>
+                                        <h3 className="text-xl font-bold text-slate-800">{pageModal.mode === "location" ? "Location Page" : "Add Page"}</h3>
                                         <div className="flex gap-3">
                                              <button onClick={() => setPageModal(null)} className="px-5 py-2.5 text-slate-600 bg-slate-100 font-semibold rounded-lg hover:bg-slate-200 cursor-pointer">Cancel</button>
                                              <button disabled={loadingAction === "page"} onClick={() => savePage(pageForm)} className="px-5 py-2.5 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed inline-flex items-center gap-2">
@@ -536,6 +639,47 @@ export default function Services() {
                                    </div>
 
                                    <div className="p-6 md:p-8 space-y-8">
+                                        {pageModal.mode === "location" && (
+                                             <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 space-y-5">
+                                                  <div>
+                                                       <h2 className="text-2xl font-bold text-slate-800">Location & SEO</h2>
+                                                       <p className="text-sm text-slate-500 mt-1">Country page URL uses country only. City page URL uses country and city.</p>
+                                                  </div>
+                                                  <div className="grid md:grid-cols-2 gap-4">
+                                                       <input value={locationMeta.country} onChange={(e) => setLocationMeta({ ...locationMeta, country: e.target.value })} placeholder="Country slug e.g. india" className={inputClass} />
+                                                       <input value={locationMeta.city} onChange={(e) => setLocationMeta({ ...locationMeta, city: e.target.value })} placeholder="City slug e.g. delhi (optional)" className={inputClass} />
+                                                       <input value={locationMeta.title} onChange={(e) => setLocationMeta({ ...locationMeta, title: e.target.value })} placeholder="Page Title" className={inputClass} />
+                                                       <input value={locationMeta.seoTitle} onChange={(e) => setLocationMeta({ ...locationMeta, seoTitle: e.target.value })} placeholder="SEO Title" className={inputClass} />
+                                                       <input value={locationMeta.keywords} onChange={(e) => setLocationMeta({ ...locationMeta, keywords: e.target.value })} placeholder="Keywords" className={inputClass} />
+                                                       <select value={locationMeta.status} onChange={(e) => setLocationMeta({ ...locationMeta, status: e.target.value })} className={inputClass}>
+                                                            <option value="published">Published</option>
+                                                            <option value="draft">Draft</option>
+                                                       </select>
+                                                  </div>
+                                                  <textarea value={locationMeta.description} onChange={(e) => setLocationMeta({ ...locationMeta, description: e.target.value })} placeholder="Meta Description" rows={3} className={textareaClass} />
+                                                  <textarea value={locationMeta.schema} onChange={(e) => setLocationMeta({ ...locationMeta, schema: e.target.value })} placeholder="JSON-LD Schema (Optional)" rows={3} className={`${textareaClass} font-mono text-xs`} />
+                                                  <div className="border border-slate-200 p-4 rounded-xl bg-slate-50">
+                                                       <label className="block text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wider">Location Page Image</label>
+                                                       <ImageUploader initialImage={locationMeta.image} setImage={(file) => setLocationImageFile(file)} />
+                                                  </div>
+                                             </div>
+                                        )}
+
+                                        {pageModal.mode === "location" && (
+                                             <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 space-y-4">
+                                                  <h2 className="text-2xl font-bold text-slate-800">Hero Section</h2>
+                                                  <input value={locationMeta.hero.title} onChange={(e) => setLocationMeta({ ...locationMeta, hero: { ...locationMeta.hero, title: e.target.value } })} placeholder="Hero Title" className={inputClass} />
+                                                  <textarea value={locationMeta.hero.description} onChange={(e) => setLocationMeta({ ...locationMeta, hero: { ...locationMeta.hero, description: e.target.value } })} placeholder="Hero Description" rows={4} className={textareaClass} />
+                                                  <div className="space-y-2">
+                                                       {locationMeta.hero.points.map((point, index) => (
+                                                            <input key={index} value={point} onChange={(e) => updateLocationHeroPoint(index, e.target.value)} placeholder={`Point ${index + 1}`} className={inputClass} />
+                                                       ))}
+                                                  </div>
+                                                  <button onClick={() => setLocationMeta({ ...locationMeta, hero: { ...locationMeta.hero, points: [...locationMeta.hero.points, ""] } })} className="text-blue-600 text-sm font-semibold cursor-pointer">
+                                                       + Add Point
+                                                  </button>
+                                             </div>
+                                        )}
                                         <PageSection title="Content Section" data={pageForm.help} onChange={(val) => setPageForm({ ...pageForm, help: val })} onAdd={() => openCardModal("help")}>
                                              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                                                   {pageForm.help.cards.map((card, index) => (
@@ -702,3 +846,8 @@ const EditBtn = ({ onClick }) => (
           </svg>
      </button>
 );
+
+
+
+
+
