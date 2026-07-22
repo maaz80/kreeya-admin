@@ -10,7 +10,39 @@ const emptyPageSection = { title: "", description: "", cards: [] };
 const emptyPage = {
      help: emptyPageSection,
      service: emptyPageSection,
-     why: { title: "", content: "" },
+     why: { 
+          title: "", 
+          content: "",
+          subtitle: "",
+          cards: [],
+          footerText: "",
+          footerLinkText: "",
+          footerLinkUrl: ""
+     },
+     stats: [
+          { number: "", label: "" },
+          { number: "", label: "" },
+          { number: "", label: "" },
+          { number: "", label: "" }
+     ],
+     workProcess: {
+          badge: "",
+          title: "",
+          subtitle: "",
+          steps: [
+               { icon: "", title: "", description: "", color: "" },
+               { icon: "", title: "", description: "", color: "" },
+               { icon: "", title: "", description: "", color: "" },
+               { icon: "", title: "", description: "", color: "" }
+          ]
+     },
+     portfolio: {
+          title: "",
+          subtitle: "",
+          ctaText: "",
+          ctaUrl: "",
+          projects: []
+     },
      faq: [{ ques: "", ans: "" }]
 };
 
@@ -31,7 +63,57 @@ const normalizePage = (page) => ({
      service: normalizePageSection(page?.service),
      why: {
           title: page?.why?.title || "",
-          content: page?.why?.content || ""
+          content: page?.why?.content || "",
+          subtitle: page?.why?.subtitle || "",
+          cards: Array.isArray(page?.why?.cards) ? page.why.cards.map(c => ({
+               icon: c?.icon || "",
+               title: c?.title || "",
+               description: c?.description || "",
+               highlight: c?.highlight || ""
+          })) : [],
+          footerText: page?.why?.footerText || "",
+          footerLinkText: page?.why?.footerLinkText || "",
+          footerLinkUrl: page?.why?.footerLinkUrl || ""
+     },
+     stats: Array.isArray(page?.stats) && page.stats.length === 4
+          ? page.stats.map(s => ({ number: s?.number || "", label: s?.label || "" }))
+          : [
+               { number: page?.stats?.[0]?.number || "", label: page?.stats?.[0]?.label || "" },
+               { number: page?.stats?.[1]?.number || "", label: page?.stats?.[1]?.label || "" },
+               { number: page?.stats?.[2]?.number || "", label: page?.stats?.[2]?.label || "" },
+               { number: page?.stats?.[3]?.number || "", label: page?.stats?.[3]?.label || "" }
+          ],
+     workProcess: {
+          badge: page?.workProcess?.badge || "",
+          title: page?.workProcess?.title || "",
+          subtitle: page?.workProcess?.subtitle || "",
+          steps: Array.isArray(page?.workProcess?.steps) && page.workProcess.steps.length === 4
+               ? page.workProcess.steps.map(s => ({
+                    icon: s?.icon || "",
+                    title: s?.title || "",
+                    description: s?.description || "",
+                    color: s?.color || ""
+               }))
+               : [
+                    { icon: page?.workProcess?.steps?.[0]?.icon || "", title: page?.workProcess?.steps?.[0]?.title || "", description: page?.workProcess?.steps?.[0]?.description || "", color: page?.workProcess?.steps?.[0]?.color || "" },
+                    { icon: page?.workProcess?.steps?.[1]?.icon || "", title: page?.workProcess?.steps?.[1]?.title || "", description: page?.workProcess?.steps?.[1]?.description || "", color: page?.workProcess?.steps?.[1]?.color || "" },
+                    { icon: page?.workProcess?.steps?.[2]?.icon || "", title: page?.workProcess?.steps?.[2]?.title || "", description: page?.workProcess?.steps?.[2]?.description || "", color: page?.workProcess?.steps?.[2]?.color || "" },
+                    { icon: page?.workProcess?.steps?.[3]?.icon || "", title: page?.workProcess?.steps?.[3]?.title || "", description: page?.workProcess?.steps?.[3]?.description || "", color: page?.workProcess?.steps?.[3]?.color || "" }
+               ]
+     },
+     portfolio: {
+          title: page?.portfolio?.title || "",
+          subtitle: page?.portfolio?.subtitle || "",
+          ctaText: page?.portfolio?.ctaText || "",
+          ctaUrl: page?.portfolio?.ctaUrl || "",
+          projects: Array.isArray(page?.portfolio?.projects) ? page.portfolio.projects.map(p => ({
+               image: p?.image || "",
+               title: p?.title || "",
+               category: p?.category || "",
+               description: p?.description || "",
+               liveLink: p?.liveLink || "",
+               caseStudyLink: p?.caseStudyLink || ""
+          })) : []
      },
      faq: Array.isArray(page?.faq) ? page.faq.map(f => ({ ques: f?.ques || "", ans: f?.ans || "" })) : [{ ques: "", ans: "" }]
 });
@@ -73,6 +155,9 @@ const hasPageContent = (page) => Boolean(
      page?.service?.cards?.length ||
      page?.why?.title ||
      page?.why?.content ||
+     page?.why?.subtitle ||
+     page?.why?.cards?.length ||
+     page?.portfolio?.projects?.length ||
      (page?.faq?.length > 0 && page.faq.some(f => f.ques || f.ans))
 );
 
@@ -85,6 +170,17 @@ const stripPageFiles = (page) => ({
                para: card.para || ""
           }))
      },
+     portfolio: page.portfolio ? {
+          ...page.portfolio,
+          projects: Array.isArray(page.portfolio.projects) ? page.portfolio.projects.map(({ file, ...project }) => ({
+               image: project.image || "",
+               title: project.title || "",
+               category: project.category || "",
+               description: project.description || "",
+               liveLink: project.liveLink || "",
+               caseStudyLink: project.caseStudyLink || ""
+          })) : []
+     } : undefined,
      faq: Array.isArray(page.faq) ? page.faq.map(({ ques, ans }) => ({ ques, ans })) : []
 });
 
@@ -117,6 +213,9 @@ export default function Services() {
      const [cardModal, setCardModal] = useState(null);
      const [editingCardIndex, setEditingCardIndex] = useState(null);
      const [tempCard, setTempCard] = useState({});
+     const [projectModalOpen, setProjectModalOpen] = useState(false);
+     const [editingProjectIndex, setEditingProjectIndex] = useState(null);
+     const [tempProject, setTempProject] = useState({ image: "", title: "", category: "", description: "", liveLink: "", caseStudyLink: "" });
      const [toast, setToast] = useState({ show: false, message: "" });
      const [loadingAction, setLoadingAction] = useState(null);
 
@@ -314,6 +413,15 @@ export default function Services() {
                     formData.append("serviceImageIndex", index);
                }
           });
+
+          if (updatedPage.portfolio?.projects) {
+               updatedPage.portfolio.projects.forEach((project, index) => {
+                    if (project.file) {
+                         formData.append("portfolioImages", project.file);
+                         formData.append("portfolioImageIndex", index);
+                    }
+               });
+          }
      };
 
      const savePage = async (updatedPage = pageForm) => {
@@ -387,6 +495,18 @@ export default function Services() {
      };
 
      const deletePageCard = (section, index) => {
+          if (section === "why") {
+               const updated = {
+                    ...pageForm,
+                    why: {
+                         ...pageForm.why,
+                         cards: (pageForm.why.cards || []).filter((_, cardIndex) => cardIndex !== index)
+                    }
+               };
+               setPageForm(updated);
+               return;
+          }
+
           const updated = {
                ...pageForm,
                [section]: {
@@ -401,7 +521,15 @@ export default function Services() {
      const openCardModal = (section, card = null, index = null) => {
           setCardModal(section);
           setEditingCardIndex(index);
-          setTempCard(card ? { ...card } : section === "help" ? { head: "", subhead: "", para: "" } : { image: "", para: "" });
+          setTempCard(
+               card 
+                    ? { ...card } 
+                    : section === "help" 
+                         ? { head: "", subhead: "", para: "" } 
+                         : section === "why"
+                              ? { icon: "", title: "", description: "", highlight: "" }
+                              : { image: "", para: "" }
+          );
      };
 
      const closeCardModal = () => {
@@ -411,6 +539,26 @@ export default function Services() {
      };
 
      const savePageCard = () => {
+          if (cardModal === "why") {
+               const cards = editingCardIndex === null
+                    ? [...(pageForm.why.cards || []), tempCard]
+                    : (pageForm.why.cards || []).map((card, index) => (
+                         index === editingCardIndex ? tempCard : card
+                    ));
+
+               const updated = {
+                    ...pageForm,
+                    why: {
+                         ...pageForm.why,
+                         cards
+                    }
+               };
+
+               setPageForm(updated);
+               closeCardModal();
+               return;
+          }
+
           const cards = editingCardIndex === null
                ? [...pageForm[cardModal].cards, tempCard]
                : pageForm[cardModal].cards.map((card, index) => (
@@ -439,6 +587,103 @@ export default function Services() {
           const faq = [...pageForm.faq];
           faq[index] = { ...faq[index], [field]: value };
           setPageForm({ ...pageForm, faq });
+     };
+
+     const updateStatField = (index, field, value) => {
+          const stats = [...(pageForm.stats || [
+               { number: "", label: "" },
+               { number: "", label: "" },
+               { number: "", label: "" },
+               { number: "", label: "" }
+          ])];
+          while (stats.length < 4) {
+               stats.push({ number: "", label: "" });
+          }
+          stats[index] = { ...stats[index], [field]: value };
+          setPageForm({ ...pageForm, stats });
+     };
+
+     const updateWorkProcessField = (field, value) => {
+          setPageForm({
+               ...pageForm,
+               workProcess: {
+                    ...(pageForm.workProcess || { badge: "", title: "", subtitle: "", steps: [] }),
+                    [field]: value
+               }
+          });
+     };
+
+     const updateWorkProcessStepField = (index, field, value) => {
+          const steps = [...(pageForm.workProcess?.steps || [
+               { icon: "", title: "", description: "", color: "" },
+               { icon: "", title: "", description: "", color: "" },
+               { icon: "", title: "", description: "", color: "" },
+               { icon: "", title: "", description: "", color: "" }
+          ])];
+          while (steps.length < 4) {
+               steps.push({ icon: "", title: "", description: "", color: "" });
+          }
+          steps[index] = { ...steps[index], [field]: value };
+          setPageForm({
+               ...pageForm,
+               workProcess: {
+                    ...(pageForm.workProcess || { badge: "", title: "", subtitle: "" }),
+                    steps
+               }
+          });
+     };
+
+     const updatePortfolioField = (field, value) => {
+          setPageForm({
+               ...pageForm,
+               portfolio: {
+                    ...(pageForm.portfolio || { title: "", subtitle: "", ctaText: "", ctaUrl: "", projects: [] }),
+                    [field]: value
+               }
+          });
+     };
+
+     const openProjectModal = (project = null, index = null) => {
+          setEditingProjectIndex(index);
+          setTempProject(
+               project 
+                    ? { ...project } 
+                    : { image: "", title: "", category: "", description: "", liveLink: "", caseStudyLink: "" }
+          );
+          setProjectModalOpen(true);
+     };
+
+     const closeProjectModal = () => {
+          setProjectModalOpen(false);
+          setEditingProjectIndex(null);
+          setTempProject({ image: "", title: "", category: "", description: "", liveLink: "", caseStudyLink: "" });
+     };
+
+     const savePageProject = () => {
+          const projects = editingProjectIndex === null
+               ? [...(pageForm.portfolio?.projects || []), tempProject]
+               : (pageForm.portfolio?.projects || []).map((p, index) => (
+                    index === editingProjectIndex ? tempProject : p
+               ));
+
+          setPageForm({
+               ...pageForm,
+               portfolio: {
+                    ...(pageForm.portfolio || { title: "", subtitle: "", ctaText: "", ctaUrl: "" }),
+                    projects
+               }
+          });
+          closeProjectModal();
+     };
+
+     const deletePageProject = (index) => {
+          setPageForm({
+               ...pageForm,
+               portfolio: {
+                    ...(pageForm.portfolio || { title: "", subtitle: "", ctaText: "", ctaUrl: "" }),
+                    projects: (pageForm.portfolio?.projects || []).filter((_, i) => i !== index)
+               }
+          });
      };
 
      const addFaq = () => {
@@ -719,11 +964,200 @@ export default function Services() {
                                              </div>
                                         </PageSection>
 
-                                        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-                                             <h2 className="text-2xl font-bold text-slate-800 mb-4">Why to Choose Us Section</h2>
-                                             <input value={pageForm.why.title} onChange={(e) => setPageForm({ ...pageForm, why: { ...pageForm.why, title: e.target.value } })} placeholder="Enter section title..." className={inputClass} />
-                                             <div className="mt-4">
+                                        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 space-y-4">
+                                             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-2 gap-4">
+                                                  <h2 className="text-2xl font-bold text-slate-800">Why to Choose Us Section</h2>
+                                                  <button onClick={() => openCardModal("why")} className="px-4 py-2.5 bg-emerald-50 text-emerald-700 text-sm font-bold border border-emerald-200 rounded-lg hover:bg-emerald-100 cursor-pointer">+ Add Card</button>
+                                             </div>
+                                             
+                                             <div className="space-y-4 bg-slate-50 p-5 rounded-xl border border-slate-100">
+                                                  <input value={pageForm.why.title} onChange={(e) => setPageForm({ ...pageForm, why: { ...pageForm.why, title: e.target.value } })} placeholder="Main Title (e.g., Why Businesses Choose Kreeya)" className={inputClass} />
+                                                  <textarea value={pageForm.why.subtitle} onChange={(e) => setPageForm({ ...pageForm, why: { ...pageForm.why, subtitle: e.target.value } })} rows={2} placeholder="Main Subtitle / Paragraph Description..." className={textareaClass} />
+                                             </div>
+
+                                             {/* Cards List */}
+                                             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                                  {(pageForm.why.cards || []).map((card, index) => (
+                                                       <Card key={index}>
+                                                            <div className="flex items-center gap-2 mb-2">
+                                                                 <span className="text-xs font-bold bg-blue-100 text-blue-800 px-2 py-0.5 rounded uppercase">Icon: {card.icon || "none"}</span>
+                                                            </div>
+                                                            <h4 className="text-lg font-bold text-slate-800 mb-1">{card.title || "Untitled Card"}</h4>
+                                                            <p className="text-sm text-slate-600 leading-relaxed mb-2">{card.description}</p>
+                                                            {card.highlight && (
+                                                                 <p className="text-xs font-bold text-red-500">✓ {card.highlight}</p>
+                                                            )}
+                                                            <div className="flex gap-2 mt-4">
+                                                                 <EditBtn onClick={() => openCardModal("why", card, index)} />
+                                                                 <DeleteBtn onClick={() => deletePageCard("why", index)} />
+                                                            </div>
+                                                       </Card>
+                                                  ))}
+                                             </div>
+
+                                             <div className="bg-slate-50 p-5 rounded-xl border border-slate-100 space-y-4">
+                                                  <h3 className="font-bold text-slate-700">Footer Note & CTA Link</h3>
+                                                  <div className="grid md:grid-cols-3 gap-4">
+                                                       <input value={pageForm.why.footerText} onChange={(e) => setPageForm({ ...pageForm, why: { ...pageForm.why, footerText: e.target.value } })} placeholder="Footer Text (e.g. Your success is our priority...)" className={inputClass} />
+                                                       <input value={pageForm.why.footerLinkText} onChange={(e) => setPageForm({ ...pageForm, why: { ...pageForm.why, footerLinkText: e.target.value } })} placeholder="Link Text (e.g. Let's build something...)" className={inputClass} />
+                                                       <input value={pageForm.why.footerLinkUrl} onChange={(e) => setPageForm({ ...pageForm, why: { ...pageForm.why, footerLinkUrl: e.target.value } })} placeholder="Link URL (e.g. /contact-us)" className={inputClass} />
+                                                  </div>
+                                             </div>
+
+                                             <div className="pt-2 border-t border-slate-200">
+                                                  <label className="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">Rich Text Content (Legacy / Fallback)</label>
                                                   <Editor value={pageForm.why.content} onChange={(val) => setPageForm({ ...pageForm, why: { ...pageForm.why, content: val } })} />
+                                             </div>
+                                        </div>
+
+                                        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 space-y-4">
+                                             <h2 className="text-2xl font-bold text-slate-800">Stats Banner Section</h2>
+                                             <p className="text-sm text-slate-500">Configure the 4 key stats displayed on the page. Leave empty to use defaults (200+, 150+, etc.)</p>
+                                             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                                  {[0, 1, 2, 3].map((index) => {
+                                                       const stat = pageForm.stats?.[index] || { number: "", label: "" };
+                                                       return (
+                                                            <div key={index} className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
+                                                                 <p className="text-xs font-bold text-slate-400">Stat {index + 1}</p>
+                                                                 <input 
+                                                                      value={stat.number} 
+                                                                      onChange={(e) => updateStatField(index, "number", e.target.value)} 
+                                                                      placeholder="Number (e.g., 200+)" 
+                                                                      className={inputClass} 
+                                                                 />
+                                                                 <input 
+                                                                      value={stat.label} 
+                                                                      onChange={(e) => updateStatField(index, "label", e.target.value)} 
+                                                                      placeholder="Label (e.g., Happy Clients)" 
+                                                                      className={inputClass} 
+                                                                 />
+                                                            </div>
+                                                       );
+                                                  })}
+                                             </div>
+                                        </div>
+
+                                        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 space-y-4">
+                                             <h2 className="text-2xl font-bold text-slate-800">Our Working Process Section</h2>
+                                             <p className="text-sm text-slate-500">Configure the 4-step work process flowchart shown on the page.</p>
+                                             
+                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 p-5 rounded-xl border border-slate-100">
+                                                  <input 
+                                                       value={pageForm.workProcess?.badge || ""} 
+                                                       onChange={(e) => updateWorkProcessField("badge", e.target.value)} 
+                                                       placeholder="Badge (e.g. How We Work)" 
+                                                       className={inputClass} 
+                                                  />
+                                                  <input 
+                                                       value={pageForm.workProcess?.title || ""} 
+                                                       onChange={(e) => updateWorkProcessField("title", e.target.value)} 
+                                                       placeholder="Main Title (e.g. Our Working Process)" 
+                                                       className={inputClass} 
+                                                  />
+                                                  <input 
+                                                       value={pageForm.workProcess?.subtitle || ""} 
+                                                       onChange={(e) => updateWorkProcessField("subtitle", e.target.value)} 
+                                                       placeholder="Subtitle (e.g. A proven methodology...)" 
+                                                       className={inputClass} 
+                                                  />
+                                             </div>
+
+                                             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                                  {[0, 1, 2, 3].map((index) => {
+                                                       const step = pageForm.workProcess?.steps?.[index] || { icon: "", title: "", description: "", color: "" };
+                                                       return (
+                                                            <div key={index} className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
+                                                                 <p className="text-xs font-bold text-slate-400">Step {index + 1}</p>
+                                                                 <input 
+                                                                      value={step.icon} 
+                                                                      onChange={(e) => updateWorkProcessStepField(index, "icon", e.target.value)} 
+                                                                      placeholder="Lucide Icon (e.g. MessageSquare)" 
+                                                                      className={inputClass} 
+                                                                 />
+                                                                 <input 
+                                                                      value={step.title} 
+                                                                      onChange={(e) => updateWorkProcessStepField(index, "title", e.target.value)} 
+                                                                      placeholder="Title (e.g. Discovery)" 
+                                                                      className={inputClass} 
+                                                                 />
+                                                                 <textarea 
+                                                                      value={step.description} 
+                                                                      onChange={(e) => updateWorkProcessStepField(index, "description", e.target.value)} 
+                                                                      placeholder="Description" 
+                                                                      rows={2}
+                                                                      className={textareaClass} 
+                                                                 />
+                                                                 <select 
+                                                                      value={step.color || "blue"} 
+                                                                      onChange={(e) => updateWorkProcessStepField(index, "color", e.target.value)} 
+                                                                      className={inputClass}
+                                                                 >
+                                                                      <option value="blue">Blue Gradient</option>
+                                                                      <option value="purple">Purple Gradient</option>
+                                                                      <option value="orange">Orange Gradient</option>
+                                                                      <option value="green">Green Gradient</option>
+                                                                 </select>
+                                                            </div>
+                                                       );
+                                                  })}
+                                             </div>
+                                        </div>
+
+                                        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 space-y-4">
+                                             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-2 gap-4">
+                                                  <div>
+                                                       <h2 className="text-2xl font-bold text-slate-800">Portfolio Projects Section</h2>
+                                                       <p className="text-sm text-slate-500">Configure the gallery of projects/case studies shown on the page.</p>
+                                                  </div>
+                                                  <button onClick={() => openProjectModal()} className="px-4 py-2.5 bg-emerald-50 text-emerald-700 text-sm font-bold border border-emerald-200 rounded-lg hover:bg-emerald-100 cursor-pointer">+ Add Project</button>
+                                             </div>
+                                             
+                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 p-5 rounded-xl border border-slate-100">
+                                                  <input 
+                                                       value={pageForm.portfolio?.title || ""} 
+                                                       onChange={(e) => updatePortfolioField("title", e.target.value)} 
+                                                       placeholder="Section Title (e.g. Projects that Deliver Results)" 
+                                                       className={inputClass} 
+                                                  />
+                                                  <input 
+                                                       value={pageForm.portfolio?.subtitle || ""} 
+                                                       onChange={(e) => updatePortfolioField("subtitle", e.target.value)} 
+                                                       placeholder="Section Subtitle (e.g. We build fast, scalable...)" 
+                                                       className={inputClass} 
+                                                  />
+                                                  <input 
+                                                       value={pageForm.portfolio?.ctaText || ""} 
+                                                       onChange={(e) => updatePortfolioField("ctaText", e.target.value)} 
+                                                       placeholder="CTA Button Text (e.g. Get Free Consultation)" 
+                                                       className={inputClass} 
+                                                  />
+                                                  <input 
+                                                       value={pageForm.portfolio?.ctaUrl || ""} 
+                                                       onChange={(e) => updatePortfolioField("ctaUrl", e.target.value)} 
+                                                       placeholder="CTA Button Link URL (e.g. /contact-us)" 
+                                                       className={inputClass} 
+                                                  />
+                                             </div>
+
+                                             {/* Projects List Grid */}
+                                             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                                  {(pageForm.portfolio?.projects || []).map((project, index) => (
+                                                       <Card key={index}>
+                                                            {project.image && (
+                                                                 <img src={project.image} alt={project.title} className="w-full h-32 object-cover rounded-lg mb-2" />
+                                                            )}
+                                                             {project.file && <p className="text-xs text-green-600 mb-2 font-semibold">✓ Selected: {project.file.name}</p>}
+                                                            <div className="flex items-center justify-between gap-2 mb-1">
+                                                                 <h4 className="text-lg font-bold text-slate-800">{project.title || "Untitled Project"}</h4>
+                                                                 <span className="text-[10px] font-bold bg-pink-100 text-pink-800 px-2 py-0.5 rounded uppercase">{project.category || "General"}</span>
+                                                            </div>
+                                                            <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed mb-3">{project.description}</p>
+                                                            <div className="flex gap-2">
+                                                                 <EditBtn onClick={() => openProjectModal(project, index)} />
+                                                                 <DeleteBtn onClick={() => deletePageProject(index)} />
+                                                            </div>
+                                                       </Card>
+                                                  ))}
                                              </div>
                                         </div>
 
@@ -752,12 +1186,21 @@ export default function Services() {
                     )}
 
                     {cardModal && (
-                         <Modal title={`${editingCardIndex === null ? "Add New" : "Edit"} ${cardModal === "help" ? "Help" : "Service"} Card`} onClose={() => closeCardModal()}>
+                         <Modal title={`${editingCardIndex === null ? "Add New" : "Edit"} ${cardModal === "help" ? "Help" : cardModal === "why" ? "Why Choose Us" : "Service"} Card`} onClose={() => closeCardModal()}>
                               {cardModal === "help" && (
                                    <>
                                         <input value={tempCard.head || ""} placeholder="Heading" className={inputClass} onChange={(e) => setTempCard({ ...tempCard, head: e.target.value })} />
                                         <input value={tempCard.subhead || ""} placeholder="Subheading" className={inputClass} onChange={(e) => setTempCard({ ...tempCard, subhead: e.target.value })} />
                                         <textarea value={tempCard.para || ""} placeholder="Paragraph Description" rows={4} className={textareaClass} onChange={(e) => setTempCard({ ...tempCard, para: e.target.value })} />
+                                   </>
+                              )}
+
+                              {cardModal === "why" && (
+                                   <>
+                                        <input value={tempCard.icon || ""} placeholder="Lucide Icon Name (e.g., Zap, Smile, Shield, Smartphone, Heart, DollarSign)" className={inputClass} onChange={(e) => setTempCard({ ...tempCard, icon: e.target.value })} />
+                                        <input value={tempCard.title || ""} placeholder="Card Title" className={inputClass} onChange={(e) => setTempCard({ ...tempCard, title: e.target.value })} />
+                                        <textarea value={tempCard.description || ""} placeholder="Card Description" rows={3} className={textareaClass} onChange={(e) => setTempCard({ ...tempCard, description: e.target.value })} />
+                                        <input value={tempCard.highlight || ""} placeholder="Highlight/Tick Text (e.g. Faster indexing. Better rankings.)" className={inputClass} onChange={(e) => setTempCard({ ...tempCard, highlight: e.target.value })} />
                                    </>
                               )}
 
@@ -769,6 +1212,24 @@ export default function Services() {
                               )}
 
                               <ModalActions onCancel={() => closeCardModal()} onSave={savePageCard} saveLabel="Save Card" />
+                         </Modal>
+                    )}
+
+                    {projectModalOpen && (
+                         <Modal title={`${editingProjectIndex === null ? "Add New" : "Edit"} Project`} onClose={() => closeProjectModal()}>
+                              <input value={tempProject.title || ""} placeholder="Project Title" className={inputClass} onChange={(e) => setTempProject({ ...tempProject, title: e.target.value })} />
+                              <input value={tempProject.category || ""} placeholder="Category (e.g., eCommerce, Portfolio, SaaS)" className={inputClass} onChange={(e) => setTempProject({ ...tempProject, category: e.target.value })} />
+                              <textarea value={tempProject.description || ""} placeholder="Project Description" rows={3} className={textareaClass} onChange={(e) => setTempProject({ ...tempProject, description: e.target.value })} />
+                              
+                              <div className="pt-2">
+                                   <label className="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">Project Image / Screenshot (Recommended Size: 600x400px)</label>
+                                   <ImageUploader initialImage={tempProject.image} setImage={(file) => setTempProject({ ...tempProject, file })} />
+                              </div>
+
+                              <input value={tempProject.liveLink || ""} placeholder="Live Site Link (e.g., https://example.com)" className={inputClass} onChange={(e) => setTempProject({ ...tempProject, liveLink: e.target.value })} />
+                              <input value={tempProject.caseStudyLink || ""} placeholder="Case Study Link (e.g., /case-studies/example)" className={inputClass} onChange={(e) => setTempProject({ ...tempProject, caseStudyLink: e.target.value })} />
+
+                              <ModalActions onCancel={closeProjectModal} onSave={savePageProject} saveLabel="Save Project" />
                          </Modal>
                     )}
 
