@@ -229,6 +229,71 @@ export default function Services() {
           fetchServices();
      }, []);
 
+     const getPagesWithSectionData = (sectionKey) => {
+          const list = [];
+          services.forEach(service => {
+               if (service.items) {
+                    service.items.forEach(item => {
+                         const isCurrent = pageModal?.item?._id === item._id && pageModal?.locationPage === undefined;
+                         if (item.page) {
+                              list.push({
+                                   id: `item-${item._id}`,
+                                   name: `${service.title} > ${item.title}`,
+                                   pageData: item.page,
+                                   isCurrent
+                              });
+                         }
+
+                         if (item.locationPages) {
+                              item.locationPages.forEach(loc => {
+                                   const isCurrentLoc = pageModal?.locationPage?._id === loc._id;
+                                   if (loc.page) {
+                                        const locName = loc.city ? `${loc.city}, ${loc.country}` : loc.country;
+                                        list.push({
+                                             id: `loc-${loc._id}`,
+                                             name: `${service.title} > ${item.title} (${locName})`,
+                                             pageData: loc.page,
+                                             isCurrent: isCurrentLoc
+                                        });
+                                   }
+                              });
+                         }
+                    });
+               }
+          });
+          return list;
+     };
+
+     const renderImportDropdown = (sectionKey, onImport) => {
+          const options = getPagesWithSectionData(sectionKey);
+          const otherOptions = options.filter(opt => !opt.isCurrent);
+          if (otherOptions.length === 0) return null;
+
+          return (
+               <div className="flex items-center gap-2 mb-4 bg-blue-50/50 p-3 rounded-lg border border-blue-100 max-w-lg">
+                    <span className="text-xs font-semibold text-blue-700 whitespace-nowrap">Copy from another page:</span>
+                    <select 
+                         defaultValue=""
+                         onChange={(e) => {
+                              const val = e.target.value;
+                              if (!val) return;
+                              const selectedOpt = otherOptions.find(opt => opt.id === val);
+                              if (selectedOpt && window.confirm(`Are you sure you want to copy the "${sectionKey}" data from "${selectedOpt.name}"? This will overwrite the current section data.`)) {
+                                   onImport(selectedOpt.pageData);
+                                   e.target.value = "";
+                              }
+                         }}
+                         className="text-xs bg-white border border-blue-200 rounded-md p-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-700 w-full"
+                    >
+                         <option value="">-- Select Page to Copy From --</option>
+                         {otherOptions.map(opt => (
+                              <option key={opt.id} value={opt.id}>{opt.name}</option>
+                         ))}
+                    </select>
+               </div>
+          );
+     };
+
      const displayToast = (message) => {
           setToast({ show: true, message });
           setTimeout(() => setToast({ show: false, message: "" }), 3000);
@@ -970,6 +1035,19 @@ export default function Services() {
                                                   <button onClick={() => openCardModal("why")} className="px-4 py-2.5 bg-emerald-50 text-emerald-700 text-sm font-bold border border-emerald-200 rounded-lg hover:bg-emerald-100 cursor-pointer">+ Add Card</button>
                                              </div>
                                              
+                                             {renderImportDropdown("why", (sourcePage) => {
+                                                  setPageForm(prev => ({
+                                                       ...prev,
+                                                       why: {
+                                                            ...prev.why,
+                                                            cards: Array.isArray(sourcePage.why?.cards) ? sourcePage.why.cards.map(c => ({ icon: c.icon || "", title: c.title || "", description: c.description || "", highlight: c.highlight || "" })) : [],
+                                                            footerText: sourcePage.why?.footerText || "",
+                                                            footerLinkText: sourcePage.why?.footerLinkText || "",
+                                                            footerLinkUrl: sourcePage.why?.footerLinkUrl || ""
+                                                       }
+                                                  }));
+                                             })}
+
                                              <div className="space-y-4 bg-slate-50 p-5 rounded-xl border border-slate-100">
                                                   <input value={pageForm.why.title} onChange={(e) => setPageForm({ ...pageForm, why: { ...pageForm.why, title: e.target.value } })} placeholder="Main Title (e.g., Why Businesses Choose Kreeya)" className={inputClass} />
                                                   <textarea value={pageForm.why.subtitle} onChange={(e) => setPageForm({ ...pageForm, why: { ...pageForm.why, subtitle: e.target.value } })} rows={2} placeholder="Main Subtitle / Paragraph Description..." className={textareaClass} />
@@ -1013,6 +1091,19 @@ export default function Services() {
                                         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 space-y-4">
                                              <h2 className="text-2xl font-bold text-slate-800">Stats Banner Section</h2>
                                              <p className="text-sm text-slate-500">Configure the 4 key stats displayed on the page. Leave empty to use defaults (200+, 150+, etc.)</p>
+                                             {renderImportDropdown("stats", (sourcePage) => {
+                                                  setPageForm(prev => ({
+                                                       ...prev,
+                                                       stats: Array.isArray(sourcePage.stats) && sourcePage.stats.length === 4
+                                                            ? sourcePage.stats.map(s => ({ number: s.number || "", label: s.label || "" }))
+                                                            : [
+                                                                 { number: "", label: "" },
+                                                                 { number: "", label: "" },
+                                                                 { number: "", label: "" },
+                                                                 { number: "", label: "" }
+                                                            ]
+                                                  }));
+                                             })}
                                              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                                                   {[0, 1, 2, 3].map((index) => {
                                                        const stat = pageForm.stats?.[index] || { number: "", label: "" };
@@ -1040,7 +1131,24 @@ export default function Services() {
                                         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 space-y-4">
                                              <h2 className="text-2xl font-bold text-slate-800">Our Working Process Section</h2>
                                              <p className="text-sm text-slate-500">Configure the 4-step work process flowchart shown on the page.</p>
-                                             
+                                             {renderImportDropdown("workProcess", (sourcePage) => {
+                                                  setPageForm(prev => ({
+                                                       ...prev,
+                                                       workProcess: {
+                                                            badge: sourcePage.workProcess?.badge || "",
+                                                            title: sourcePage.workProcess?.title || "",
+                                                            subtitle: sourcePage.workProcess?.subtitle || "",
+                                                            steps: Array.isArray(sourcePage.workProcess?.steps) && sourcePage.workProcess.steps.length === 4
+                                                                 ? sourcePage.workProcess.steps.map(s => ({ icon: s.icon || "", title: s.title || "", description: s.description || "", color: s.color || "" }))
+                                                                 : [
+                                                                      { icon: "", title: "", description: "", color: "" },
+                                                                      { icon: "", title: "", description: "", color: "" },
+                                                                      { icon: "", title: "", description: "", color: "" },
+                                                                      { icon: "", title: "", description: "", color: "" }
+                                                                 ]
+                                                       }
+                                                  }));
+                                             })}
                                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 p-5 rounded-xl border border-slate-100">
                                                   <input 
                                                        value={pageForm.workProcess?.badge || ""} 
@@ -1112,6 +1220,26 @@ export default function Services() {
                                                   <button onClick={() => openProjectModal()} className="px-4 py-2.5 bg-emerald-50 text-emerald-700 text-sm font-bold border border-emerald-200 rounded-lg hover:bg-emerald-100 cursor-pointer">+ Add Project</button>
                                              </div>
                                              
+                                             {renderImportDropdown("portfolio", (sourcePage) => {
+                                                  setPageForm(prev => ({
+                                                       ...prev,
+                                                       portfolio: {
+                                                            title: sourcePage.portfolio?.title || "",
+                                                            subtitle: sourcePage.portfolio?.subtitle || "",
+                                                            ctaText: sourcePage.portfolio?.ctaText || "",
+                                                            ctaUrl: sourcePage.portfolio?.ctaUrl || "",
+                                                            projects: Array.isArray(sourcePage.portfolio?.projects) ? sourcePage.portfolio.projects.map(p => ({
+                                                                 image: p.image || "",
+                                                                 title: p.title || "",
+                                                                 category: p.category || "",
+                                                                 description: p.description || "",
+                                                                 liveLink: p.liveLink || "",
+                                                                 caseStudyLink: p.caseStudyLink || ""
+                                                            })) : []
+                                                       }
+                                                  }));
+                                             })}
+
                                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 p-5 rounded-xl border border-slate-100">
                                                   <input 
                                                        value={pageForm.portfolio?.title || ""} 

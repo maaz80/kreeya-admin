@@ -31,6 +31,7 @@ const Home = () => {
                <Link to="/navigations" className='bg-orange-600 px-10 py-3 rounded-2xl text-center w-100'>Navigations</Link>
                <Link to="/company-worked" className='bg-orange-600 px-10 py-3 rounded-2xl text-center w-100'>Company Worked</Link>
                <Link to="/portfolios" className='bg-orange-600 px-10 py-3 rounded-2xl text-center w-100'>Portfolios</Link>
+               <Link to="/technologies" className='bg-orange-600 px-10 py-3 rounded-2xl text-center w-100'>Technologies We Use</Link>
           </div>
      )
 }

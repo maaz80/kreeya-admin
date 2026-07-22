@@ -23,6 +23,7 @@ import Login from "./pages/Login"
 // import ServicePageAdmin from "./pages/ServicePage"
 import Locations from "./pages/Location"
 import Portfolios from "./pages/Portfolios"
+import Technologies from "./pages/Technologies"
 
 const protectedPage = (page) => (
   <ProtectedRoute>
@@ -53,6 +54,7 @@ const App = () => {
         <Route path='/navigations' element={protectedPage(<Navigation />)} />
         <Route path='/company-worked' element={protectedPage(<CompanyWorked />)} />
         <Route path='/portfolios' element={protectedPage(<Portfolios />)} />
+        <Route path='/technologies' element={protectedPage(<Technologies />)} />
         {/* <Route path='/location-hero' element={protectedPage(<LocationHeroAdmin />)} />
         <Route path='/location-page' element={protectedPage(<LocationPageAdmin />)} /> */}
         {/* <Route path="/service/:serviceId/item/:itemId/hero" element={<ServiceHeroAdmin />} />
